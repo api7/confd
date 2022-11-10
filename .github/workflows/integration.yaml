@@ -30,6 +30,10 @@ jobs:
 
       - name: Build and Install
         run: |
+          go install  go.etcd.io/etcd/etcdctl/v3
+
+      - name: Build and Install
+        run: |
           make build
           sudo make install
 
