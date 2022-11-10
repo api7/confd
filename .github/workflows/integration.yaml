@@ -39,9 +39,11 @@ jobs:
           make build
           sudo make install
 
+      - name: Wait for etcd ready
+        run: |
+          wget -qO- https://raw.githubusercontent.com/eficode/wait-for/v2.2.3/wait-for | sh -s -- localhost:2379 -- echo "etcd is up"
+
       - name: Test with etcd
         run: |
           integration/etcdv3/test.sh
           integration/expect/check.sh
-        env:
-          ETCD_ENDPOINT: "http://etcd:2379"
