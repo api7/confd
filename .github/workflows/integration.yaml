@@ -30,8 +30,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          apt-get -q update
-          DEBIAN_FRONTEND="noninteractive" apt-get install -y etcd-client
+          sudo apt-get -q update
+          DEBIAN_FRONTEND="noninteractive" sudo apt-get install -y etcd-client
 
       - name: Build and Install
         run: |
