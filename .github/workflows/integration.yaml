@@ -10,7 +10,6 @@ on:
 jobs:
   run-test:
     runs-on: ubuntu-latest
-    container: ubuntu:latest
     services:
       etcd:
         image: quay.io/coreos/etcd
@@ -23,11 +22,6 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v3
-
-      - name: Install dependencies
-        run: |
-          apt-get -q update
-          DEBIAN_FRONTEND="noninteractive" apt-get install -y git curl make redis-tools sudo awscli gnupg2 lsb-release etcd-client
 
       - name: Setup Go
         uses: actions/setup-go@v3
