@@ -28,9 +28,10 @@ jobs:
         with:
           go-version: 1.19
 
-      - name: Build and Install
+      - name: Install dependencies
         run: |
-          go install  go.etcd.io/etcd/etcdctl/v3
+          apt-get -q update
+          DEBIAN_FRONTEND="noninteractive" apt-get install -y etcd-client
 
       - name: Build and Install
         run: |
