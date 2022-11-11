@@ -27,7 +27,7 @@ func main() {
 
 	storeClient, err := backends.New(config.BackendsConfig)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatal("failed to new backend client, err: %s", err.Error())
 	}
 
 	config.TemplateConfig.StoreClient = storeClient
@@ -62,6 +62,7 @@ func main() {
 			log.Info(fmt.Sprintf("Captured %v. Exiting...", s))
 			close(doneChan)
 		case <-doneChan:
+			log.Info("confd exiting on done signal")
 			os.Exit(0)
 		}
 	}

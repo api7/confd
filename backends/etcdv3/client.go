@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
+	"os"
 	"strings"
 	"time"
 
@@ -60,20 +60,21 @@ func createWatch(client *clientv3.Client, prefix string) (*Watch, error) {
 	go func() {
 		rch := client.Watch(context.Background(), prefix, clientv3.WithPrefix(),
 			clientv3.WithCreatedNotify())
-		log.Debug("Watch created on %s", prefix)
+		log.Info("Watch created on %s", prefix)
 		for {
 			for wresp := range rch {
 				if wresp.CompactRevision > w.revision {
 					// respect CompactRevision
 					w.update(wresp.CompactRevision)
-					log.Debug("Watch to '%s' updated to %d by CompactRevision", prefix, wresp.CompactRevision)
+					log.Info("Watch to '%s' updated to %d by CompactRevision", prefix, wresp.CompactRevision)
 				} else if wresp.Header.GetRevision() > w.revision {
 					// Watch created or updated
 					w.update(wresp.Header.GetRevision())
-					log.Debug("Watch to '%s' updated to %d by header revision", prefix, wresp.Header.GetRevision())
+					log.Info("Watch to '%s' updated to %d by header revision", prefix, wresp.Header.GetRevision())
 				}
 				if err := wresp.Err(); err != nil {
 					log.Error("Watch error: %s", err.Error())
+					break
 				}
 			}
 			log.Warning("Watch to '%s' stopped at revision %d", prefix, w.revision)
@@ -123,7 +124,7 @@ func NewEtcdClient(machines []string, cert, key, caCert string, basicAuth bool, 
 	}
 
 	if caCert != "" {
-		certBytes, err := ioutil.ReadFile(caCert)
+		certBytes, err := os.ReadFile(caCert)
 		if err != nil {
 			return &Client{}, err
 		}
@@ -223,7 +224,6 @@ func (c *Client) GetValues(keys []string) (map[string]string, error) {
 
 func (c *Client) WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error) {
 	var err error
-
 	// Create watch for each key
 	watches := make(map[string]*Watch)
 	c.wm.Lock()
@@ -248,8 +248,10 @@ func (c *Client) WatchPrefix(prefix string, keys []string, waitIndex uint64, sto
 	go func() {
 		select {
 		case <-stopChan:
+			log.Info("Stop watch for %s", prefix)
 			cancel()
 		case <-cancelRoutine:
+			log.Info("Cancel watch for %s", prefix)
 			return
 		}
 	}()
@@ -261,8 +263,10 @@ func (c *Client) WatchPrefix(prefix string, keys []string, waitIndex uint64, sto
 	}
 	select {
 	case nextRevision := <-notify:
+		log.Info("Watch for %s returns %d", prefix, nextRevision)
 		return uint64(nextRevision), err
 	case <-ctx.Done():
+		log.Info("Watch for %s is done, ctx err: %s", prefix, ctx.Err())
 		return 0, ctx.Err()
 	}
 	return 0, err

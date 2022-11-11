@@ -186,7 +186,7 @@ func (t *TemplateResource) sync() error {
 	log.Debug("Comparing candidate config to " + t.Dest)
 	ok, err := util.IsConfigChanged(staged, t.Dest)
 	if err != nil {
-		log.Error(err.Error())
+		log.Error("failed to check config changed: %s", err.Error())
 	}
 	if t.noop {
 		log.Warning("Noop mode enabled. " + t.Dest + " will not be modified")
@@ -203,15 +203,15 @@ func (t *TemplateResource) sync() error {
 		err := os.Rename(staged, t.Dest)
 		if err != nil {
 			if strings.Contains(err.Error(), "device or resource busy") {
-				log.Debug("Rename failed - target is likely a mount. Trying to write instead")
+				log.Warning("Rename failed - target is likely a mount. Trying to write instead")
 				// try to open the file and write to it
 				var contents []byte
 				var rerr error
-				contents, rerr = ioutil.ReadFile(staged)
+				contents, rerr = os.ReadFile(staged)
 				if rerr != nil {
 					return rerr
 				}
-				err := ioutil.WriteFile(t.Dest, contents, t.FileMode)
+				err := os.WriteFile(t.Dest, contents, t.FileMode)
 				// make sure owner and group match the temp file, in case the file was created with WriteFile
 				os.Chown(t.Dest, t.Uid, t.Gid)
 				if err != nil {
@@ -288,16 +288,16 @@ func runCommand(cmd string) error {
 // It returns an error if any.
 func (t *TemplateResource) process() error {
 	if err := t.setFileMode(); err != nil {
-		return err
+		return fmt.Errorf("failed to set file mode: %s", err)
 	}
 	if err := t.setVars(); err != nil {
-		return err
+		return fmt.Errorf("failed to set vars: %s", err)
 	}
 	if err := t.createStageFile(); err != nil {
-		return err
+		return fmt.Errorf("failed to create stage file: %s", err)
 	}
 	if err := t.sync(); err != nil {
-		return err
+		return fmt.Errorf("failed to sync: %s", err)
 	}
 	return nil
 }
