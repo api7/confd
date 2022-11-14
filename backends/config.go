@@ -26,6 +26,6 @@ type Config struct {
 	YAMLFile       util.Nodes `toml:"file"`
 	Filter         string     `toml:"filter"`
 	Path           string     `toml:"path"`
+	LogLevel       string     `toml:"log-level"`
 	Role           string
-	LogLevel       string `toml:"log-level"`
 }

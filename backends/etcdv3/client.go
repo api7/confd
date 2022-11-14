@@ -285,10 +285,10 @@ func (c *Client) WatchPrefix(prefix string, keys []string, waitIndex uint64, sto
 	go func() {
 		select {
 		case <-stopChan:
-			log.Info("Stop watch for %s", prefix)
+			log.Info("get stopChan message, prefix %s, keys: %v", prefix, keys)
 			cancel()
 		case <-cancelRoutine:
-			log.Info("Cancel watch for %s", prefix)
+			log.Info("get cancelRoutine message, prefix: %s, keys: %v", prefix, keys)
 			return
 		}
 	}()

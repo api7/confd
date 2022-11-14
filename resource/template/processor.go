@@ -102,7 +102,7 @@ func (p *watchProcessor) monitorPrefix(t *TemplateResource) {
 			time.Sleep(time.Second * 2)
 			continue
 		}
-		log.Info("prefix %s changed, index %v", t.Prefix, index)
+		log.Info("created watch for prefix %s, current index %v", t.Prefix, index)
 		t.lastIndex = index
 		if err := t.process(); err != nil {
 			log.Error("failed to process resource: %#v, err: %s", t, err.Error())
