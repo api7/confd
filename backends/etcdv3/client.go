@@ -28,6 +28,7 @@ func (w *Watch) WaitNext(ctx context.Context, lastRevision int64, notify chan<- 
 	for {
 		w.rwl.RLock()
 		if w.revision > lastRevision {
+			log.Info("watch revision %v is larger than last revision %v", w.revision, lastRevision)
 			w.rwl.RUnlock()
 			break
 		}
@@ -36,6 +37,7 @@ func (w *Watch) WaitNext(ctx context.Context, lastRevision int64, notify chan<- 
 		select {
 		case <-cond:
 		case <-ctx.Done():
+			log.Info("watch context is done")
 			return
 		}
 	}
@@ -51,6 +53,7 @@ func (w *Watch) update(newRevision int64) {
 	w.rwl.Lock()
 	defer w.rwl.Unlock()
 	w.revision = newRevision
+	log.Info("Watch revision updated to %d", newRevision)
 	close(w.cond)
 	w.cond = make(chan struct{})
 }
@@ -231,8 +234,10 @@ func (c *Client) WatchPrefix(prefix string, keys []string, waitIndex uint64, sto
 		watch, ok := c.watches[k]
 		if !ok {
 			watch, err = createWatch(c.client, k)
+			log.Info("Created watch for key: ", k)
 			if err != nil {
 				c.wm.Unlock()
+				log.Error("Error creating watch for key: ", k, " err: ", err)
 				return 0, err
 			}
 			c.watches[k] = watch
