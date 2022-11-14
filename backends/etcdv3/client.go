@@ -6,11 +6,16 @@ import (
 	"crypto/x509"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/kelseyhightower/confd/log"
+	"go.etcd.io/etcd/client/pkg/v3/logutil"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"sync"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapgrpc"
+	"google.golang.org/grpc/grpclog"
+
+	"github.com/kelseyhightower/confd/log"
 )
 
 // A watch only tells the latest revision
@@ -108,7 +113,8 @@ type Client struct {
 }
 
 // NewEtcdClient returns an *etcdv3.Client with a connection to named machines.
-func NewEtcdClient(machines []string, cert, key, caCert string, basicAuth bool, username string, password string) (*Client, error) {
+func NewEtcdClient(machines []string, cert, key, caCert string, basicAuth bool,
+	username, password, logLevel string) (*Client, error) {
 	cfg := clientv3.Config{
 		Endpoints:            machines,
 		DialTimeout:          5 * time.Second,
@@ -152,6 +158,32 @@ func NewEtcdClient(machines []string, cert, key, caCert string, basicAuth bool, 
 
 	if tlsEnabled {
 		cfg.TLS = tlsConfig
+	}
+
+	// set log level for etcd client
+	switch logLevel {
+	case "debug":
+		lg, err := logutil.CreateDefaultZapLogger(zap.DebugLevel)
+		if err != nil {
+			return &Client{}, err
+		}
+		cfg.Logger = lg
+	case "info":
+		lg, err := logutil.CreateDefaultZapLogger(zap.InfoLevel)
+		if err != nil {
+			return &Client{}, err
+		}
+		cfg.Logger = lg
+	case "warn":
+		lg, err := logutil.CreateDefaultZapLogger(zap.WarnLevel)
+		if err != nil {
+			return &Client{}, err
+		}
+		cfg.Logger = lg
+	}
+	if cfg.Logger != nil {
+		cfg.Logger.Named("etcd-client")
+		grpclog.SetLoggerV2(zapgrpc.NewLogger(cfg.Logger))
 	}
 
 	client, err := clientv3.New(cfg)
@@ -234,10 +266,10 @@ func (c *Client) WatchPrefix(prefix string, keys []string, waitIndex uint64, sto
 		watch, ok := c.watches[k]
 		if !ok {
 			watch, err = createWatch(c.client, k)
-			log.Info("Created watch for key: ", k)
+			log.Info("Created watch for key: %s", k)
 			if err != nil {
 				c.wm.Unlock()
-				log.Error("Error creating watch for key: ", k, " err: ", err)
+				log.Error("Error creating watch for key: %s, err: %s", k, err)
 				return 0, err
 			}
 			c.watches[k] = watch

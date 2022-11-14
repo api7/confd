@@ -26,7 +26,6 @@ type Config struct {
 	Interval     int    `toml:"interval"`
 	SRVDomain    string `toml:"srv_domain"`
 	SRVRecord    string `toml:"srv_record"`
-	LogLevel     string `toml:"log-level"`
 	Watch        bool   `toml:"watch"`
 	PrintVersion bool
 	ConfigFile   string
