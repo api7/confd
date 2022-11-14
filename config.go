@@ -48,7 +48,7 @@ func init() {
 	flag.StringVar(&config.Filter, "filter", "*", "files filter (only used with -backend=file)")
 	flag.IntVar(&config.Interval, "interval", 600, "backend polling interval")
 	flag.BoolVar(&config.KeepStageFile, "keep-stage-file", false, "keep staged files")
-	flag.StringVar(&config.LogLevel, "log-level", "", "level which confd should log messages")
+	flag.StringVar(&config.LogLevel, "log-level", "info", "level which confd should log messages, info as default")
 	flag.Var(&config.BackendNodes, "node", "list of backend nodes")
 	flag.BoolVar(&config.Noop, "noop", false, "only show pending changes")
 	flag.BoolVar(&config.OneTime, "onetime", false, "run once and exit")
