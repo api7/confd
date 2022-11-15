@@ -30,6 +30,8 @@ jobs:
           go-version: 1.19
 
       - name: Build and Push
+        env:
+          REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
         run: |
           TAG=${GITHUB_REF##*/}
           docker buildx build --push \
