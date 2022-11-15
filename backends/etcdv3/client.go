@@ -37,6 +37,7 @@ func (w *Watch) WaitNext(ctx context.Context, lastRevision int64, notify chan<- 
 			w.rwl.RUnlock()
 			break
 		}
+		log.Info("watch revision %v is smaller than or equals last revision %v", w.revision, lastRevision)
 		cond := w.cond
 		w.rwl.RUnlock()
 		select {
@@ -82,7 +83,6 @@ func createWatch(client *clientv3.Client, prefix string) (*Watch, error) {
 				}
 				if err := wresp.Err(); err != nil {
 					log.Error("Watch error: %s", err.Error())
-					break
 				}
 			}
 			log.Warning("Watch to '%s' stopped at revision %d", prefix, w.revision)
@@ -300,7 +300,7 @@ func (c *Client) WatchPrefix(prefix string, keys []string, waitIndex uint64, sto
 	}
 	select {
 	case nextRevision := <-notify:
-		log.Info("Watch for %s returns %d", prefix, nextRevision)
+		log.Info("Watch for %s returns nextRevision %d", prefix, nextRevision)
 		return uint64(nextRevision), err
 	case <-ctx.Done():
 		log.Info("Watch for %s is done, ctx err: %s", prefix, ctx.Err())

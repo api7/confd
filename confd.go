@@ -57,7 +57,7 @@ func main() {
 	for {
 		select {
 		case err := <-errChan:
-			log.Error(err.Error())
+			log.Error("process err: %s", err.Error())
 		case s := <-signalChan:
 			log.Info(fmt.Sprintf("Captured %v. Exiting...", s))
 			close(doneChan)

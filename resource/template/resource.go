@@ -183,7 +183,7 @@ func (t *TemplateResource) sync() error {
 		defer os.Remove(staged)
 	}
 
-	log.Debug("Comparing candidate config to " + t.Dest)
+	log.Info("Comparing candidate config to " + t.Dest)
 	ok, err := util.IsConfigChanged(staged, t.Dest)
 	if err != nil {
 		log.Error("failed to check config changed: %s", err.Error())
