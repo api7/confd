@@ -49,9 +49,11 @@ func New(config Config) (StoreClient, error) {
 		)
 	case "etcd":
 		// etcd v2 has been deprecated and etcdv3 is now the client for both the etcd and etcdv3 backends.
-		return etcdv3.NewEtcdClient(backendNodes, config.ClientCert, config.ClientKey, config.ClientCaKeys, config.BasicAuth, config.Username, config.Password)
+		return etcdv3.NewEtcdClient(backendNodes, config.ClientCert, config.ClientKey,
+			config.ClientCaKeys, config.BasicAuth, config.Username, config.Password, config.LogLevel)
 	case "etcdv3":
-		return etcdv3.NewEtcdClient(backendNodes, config.ClientCert, config.ClientKey, config.ClientCaKeys, config.BasicAuth, config.Username, config.Password)
+		return etcdv3.NewEtcdClient(backendNodes, config.ClientCert, config.ClientKey,
+			config.ClientCaKeys, config.BasicAuth, config.Username, config.Password, config.LogLevel)
 	case "zookeeper":
 		return zookeeper.NewZookeeperClient(backendNodes)
 	case "rancher":

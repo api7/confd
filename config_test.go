@@ -15,6 +15,7 @@ func TestInitConfigDefaultConfig(t *testing.T) {
 			BackendNodes: []string{"http://127.0.0.1:4001"},
 			Scheme:       "http",
 			Filter:       "*",
+			LogLevel:     "info",
 		},
 		TemplateConfig: TemplateConfig{
 			ConfDir:     "/etc/confd",

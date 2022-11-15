@@ -25,7 +25,7 @@ func process(ts []*TemplateResource) error {
 	var lastErr error
 	for _, t := range ts {
 		if err := t.process(); err != nil {
-			log.Error(err.Error())
+			log.Error("failed to process resource: %#v, err: %s", t, err.Error())
 			lastErr = err
 		}
 	}
@@ -49,7 +49,7 @@ func (p *intervalProcessor) Process() {
 	for {
 		ts, err := getTemplateResources(p.config)
 		if err != nil {
-			log.Fatal(err.Error())
+			log.Fatal("failed to get template resources, err: %s", err.Error())
 			break
 		}
 		process(ts)
@@ -96,13 +96,16 @@ func (p *watchProcessor) monitorPrefix(t *TemplateResource) {
 	for {
 		index, err := t.storeClient.WatchPrefix(t.Prefix, keys, t.lastIndex, p.stopChan)
 		if err != nil {
+			log.Error("failed to watch prefix: %s, err: %s", t.Prefix, err.Error())
 			p.errChan <- err
 			// Prevent backend errors from consuming all resources.
 			time.Sleep(time.Second * 2)
 			continue
 		}
+		log.Info("watch response for prefix %s, current index %v", t.Prefix, index)
 		t.lastIndex = index
 		if err := t.process(); err != nil {
+			log.Error("failed to process resource: %#v, err: %s", t, err.Error())
 			p.errChan <- err
 		}
 	}

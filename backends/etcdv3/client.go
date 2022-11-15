@@ -4,13 +4,18 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
+	"os"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/kelseyhightower/confd/log"
+	"go.etcd.io/etcd/client/pkg/v3/logutil"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"sync"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapgrpc"
+	"google.golang.org/grpc/grpclog"
+
+	"github.com/kelseyhightower/confd/log"
 )
 
 // A watch only tells the latest revision
@@ -28,14 +33,17 @@ func (w *Watch) WaitNext(ctx context.Context, lastRevision int64, notify chan<- 
 	for {
 		w.rwl.RLock()
 		if w.revision > lastRevision {
+			log.Info("watch revision %v is larger than last revision %v", w.revision, lastRevision)
 			w.rwl.RUnlock()
 			break
 		}
+		log.Info("watch revision %v is smaller than or equals last revision %v", w.revision, lastRevision)
 		cond := w.cond
 		w.rwl.RUnlock()
 		select {
 		case <-cond:
 		case <-ctx.Done():
+			log.Info("watch context is done")
 			return
 		}
 	}
@@ -51,6 +59,7 @@ func (w *Watch) update(newRevision int64) {
 	w.rwl.Lock()
 	defer w.rwl.Unlock()
 	w.revision = newRevision
+	log.Info("Watch revision updated to %d", newRevision)
 	close(w.cond)
 	w.cond = make(chan struct{})
 }
@@ -60,17 +69,17 @@ func createWatch(client *clientv3.Client, prefix string) (*Watch, error) {
 	go func() {
 		rch := client.Watch(context.Background(), prefix, clientv3.WithPrefix(),
 			clientv3.WithCreatedNotify())
-		log.Debug("Watch created on %s", prefix)
+		log.Info("Watch created on %s", prefix)
 		for {
 			for wresp := range rch {
 				if wresp.CompactRevision > w.revision {
 					// respect CompactRevision
 					w.update(wresp.CompactRevision)
-					log.Debug("Watch to '%s' updated to %d by CompactRevision", prefix, wresp.CompactRevision)
+					log.Info("Watch to '%s' updated to %d by CompactRevision", prefix, wresp.CompactRevision)
 				} else if wresp.Header.GetRevision() > w.revision {
 					// Watch created or updated
 					w.update(wresp.Header.GetRevision())
-					log.Debug("Watch to '%s' updated to %d by header revision", prefix, wresp.Header.GetRevision())
+					log.Info("Watch to '%s' updated to %d by header revision", prefix, wresp.Header.GetRevision())
 				}
 				if err := wresp.Err(); err != nil {
 					log.Error("Watch error: %s", err.Error())
@@ -104,7 +113,8 @@ type Client struct {
 }
 
 // NewEtcdClient returns an *etcdv3.Client with a connection to named machines.
-func NewEtcdClient(machines []string, cert, key, caCert string, basicAuth bool, username string, password string) (*Client, error) {
+func NewEtcdClient(machines []string, cert, key, caCert string, basicAuth bool,
+	username, password, logLevel string) (*Client, error) {
 	cfg := clientv3.Config{
 		Endpoints:            machines,
 		DialTimeout:          5 * time.Second,
@@ -123,7 +133,7 @@ func NewEtcdClient(machines []string, cert, key, caCert string, basicAuth bool, 
 	}
 
 	if caCert != "" {
-		certBytes, err := ioutil.ReadFile(caCert)
+		certBytes, err := os.ReadFile(caCert)
 		if err != nil {
 			return &Client{}, err
 		}
@@ -148,6 +158,32 @@ func NewEtcdClient(machines []string, cert, key, caCert string, basicAuth bool, 
 
 	if tlsEnabled {
 		cfg.TLS = tlsConfig
+	}
+
+	// set log level for etcd client
+	switch logLevel {
+	case "debug":
+		lg, err := logutil.CreateDefaultZapLogger(zap.DebugLevel)
+		if err != nil {
+			return &Client{}, err
+		}
+		cfg.Logger = lg
+	case "info":
+		lg, err := logutil.CreateDefaultZapLogger(zap.InfoLevel)
+		if err != nil {
+			return &Client{}, err
+		}
+		cfg.Logger = lg
+	case "warn":
+		lg, err := logutil.CreateDefaultZapLogger(zap.WarnLevel)
+		if err != nil {
+			return &Client{}, err
+		}
+		cfg.Logger = lg
+	}
+	if cfg.Logger != nil {
+		cfg.Logger.Named("etcd-client")
+		grpclog.SetLoggerV2(zapgrpc.NewLogger(cfg.Logger))
 	}
 
 	client, err := clientv3.New(cfg)
@@ -223,7 +259,6 @@ func (c *Client) GetValues(keys []string) (map[string]string, error) {
 
 func (c *Client) WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error) {
 	var err error
-
 	// Create watch for each key
 	watches := make(map[string]*Watch)
 	c.wm.Lock()
@@ -231,8 +266,10 @@ func (c *Client) WatchPrefix(prefix string, keys []string, waitIndex uint64, sto
 		watch, ok := c.watches[k]
 		if !ok {
 			watch, err = createWatch(c.client, k)
+			log.Info("Created watch for key: %s", k)
 			if err != nil {
 				c.wm.Unlock()
+				log.Error("Error creating watch for key: %s, err: %s", k, err)
 				return 0, err
 			}
 			c.watches[k] = watch
@@ -248,8 +285,10 @@ func (c *Client) WatchPrefix(prefix string, keys []string, waitIndex uint64, sto
 	go func() {
 		select {
 		case <-stopChan:
+			log.Info("get stopChan message, prefix %s, keys: %v", prefix, keys)
 			cancel()
 		case <-cancelRoutine:
+			log.Info("get cancelRoutine message, prefix: %s, keys: %v", prefix, keys)
 			return
 		}
 	}()
@@ -261,8 +300,10 @@ func (c *Client) WatchPrefix(prefix string, keys []string, waitIndex uint64, sto
 	}
 	select {
 	case nextRevision := <-notify:
+		log.Info("Watch for %s returns nextRevision %d", prefix, nextRevision)
 		return uint64(nextRevision), err
 	case <-ctx.Done():
+		log.Info("Watch for %s is done, ctx err: %s", prefix, ctx.Err())
 		return 0, ctx.Err()
 	}
 	return 0, err
