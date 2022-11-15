@@ -1,23 +1,21 @@
 ARG TARGETOS
 ARG TARGETARCH
-ARG VERSION
 ARG BUILDPLATFORM=amd64
 ARG ENABLE_PROXY=false
 
 FROM --platform=$BUILDPLATFORM golang:1.19 as builder
 
-RUN  apt-get update && apt-get install -y --no-install-recommends git
+RUN apt-get update && apt-get install -y --no-install-recommends git
 
 WORKDIR /confd
 
 COPY . .
 
-RUN GIT_SHA=`git rev-parse --short HEAD || echo`
-RUN echo $GIT_SHA && echo $VERSION
 RUN if [ "$ENABLE_PROXY" = "true" ] ; then go env -w GOPROXY=https://goproxy.io,direct ; fi \
     && go env -w GO111MODULE=on \
-    && CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH}  \
-    go build -ldflags "-X main.GitSHA=${GIT_SHA}" -o confd .
+    && GIT_SHA=`git rev-parse --short HEAD || echo` \
+    && CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build -ldflags="-s -w -X main.GitSHA=${GIT_SHA}" -o confd .
 
 FROM debian:latest as prod
 

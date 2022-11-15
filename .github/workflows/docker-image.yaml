@@ -42,14 +42,12 @@ jobs:
           TAG=${GITHUB_REF##*/}
           docker buildx build --push \
           -t ${REGISTRY}/confd:${TAG} \
-          --build-arg VERSION=${TAG} \
           --platform linux/amd64,linux/arm64 \
           -f ./Dockerfile .
 
           # export for upload
           docker buildx build \
           -t ${REGISTRY}/confd:${TAG} \
-          --build-arg VERSION=${TAG} \
           --platform linux/amd64 \
           --output type=docker,dest=./image.tar \
           -f ./Dockerfile .
