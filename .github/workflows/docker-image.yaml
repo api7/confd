@@ -33,12 +33,12 @@ jobs:
         run: |
           TAG=${GITHUB_REF##*/}
           docker buildx build --push \
-          -t ${REGISTRY}/confd:$(TAG) \
-           --build-arg VERSION=$(TAG) \
+          -t ${REGISTRY}/confd:${TAG} \
+           --build-arg VERSION=${TAG} \
           --platform linux/amd64,linux/arm64 \
           -f ./Dockerfile .
 
-          docker save -o image.tar ${REGISTRY}/confd:$(TAG)
+          docker save -o image.tar ${REGISTRY}/confd:${TAG}
 
       - name: Publish Artifact
         uses: actions/upload-artifact@v2.2.3
