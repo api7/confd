@@ -13,10 +13,11 @@ WORKDIR /confd
 COPY . .
 
 RUN GIT_SHA=`git rev-parse --short HEAD || echo`
+RUN echo $GIT_SHA && echo $VERSION
 RUN if [ "$ENABLE_PROXY" = "true" ] ; then go env -w GOPROXY=https://goproxy.io,direct ; fi \
     && go env -w GO111MODULE=on \
     && CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH}  \
-    go build -ldflags "-X main.GitSHA=${GIT_SHA} -X main.Version=${VERSION}" -o confd .
+    go build -ldflags "-X main.GitSHA=${GIT_SHA}" -o confd .
 
 FROM debian:latest as prod
 
