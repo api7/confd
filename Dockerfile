@@ -6,7 +6,7 @@ ARG ENABLE_PROXY=false
 
 FROM --platform=$PLATFORM golang:1.19 as builder
 
-RUN apk add --no-cache --virtual .builddeps git
+RUN  apt-get update && apt-get install -y --no-install-recommends git
 
 WORKDIR /confd
 
@@ -21,6 +21,8 @@ RUN if [ "$ENABLE_PROXY" = "true" ] ; then go env -w GOPROXY=https://goproxy.io,
 FROM debian:latest as prod
 
 COPY --from=builder /confd/confd /usr/local/bin/confd
+
+RUN  apt-get update && apt-get install -y --no-install-recommends curl net-tools telnet procps
 
 EXPOSE 9000
 
