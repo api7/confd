@@ -1,10 +1,10 @@
 ARG TARGETOS
 ARG TARGETARCH
 ARG VERSION
-ARG PLATFORM=amd64
+ARG BUILDPLATFORM=amd64
 ARG ENABLE_PROXY=false
 
-FROM --platform=$PLATFORM golang:1.19 as builder
+FROM --platform=$BUILDPLATFORM golang:1.19 as builder
 
 RUN  apt-get update && apt-get install -y --no-install-recommends git
 

@@ -40,20 +40,28 @@ jobs:
           REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
         run: |
           TAG=${GITHUB_REF##*/}
-          docker buildx build \
+          docker buildx build --push \
           -t ${REGISTRY}/confd:${TAG} \
           --build-arg VERSION=${TAG} \
           --platform linux/amd64,linux/arm64 \
-          --output type=docker,dest=./image.tar \
           -f ./Dockerfile .
-          docker images
-          docker push ${REGISTRY}/confd:${TAG}
+
+          # export for upload
+          docker buildx build\
+          -t ${REGISTRY}/confd:${TAG} \
+          --build-arg VERSION=${TAG} \
+          --platform linux/amd64 \
+          --output type=docker,dest=./image.tar \
+          -f ./Dockerfile
+
+          gzip image.tar
+
       - name: Publish Artifact
         uses: actions/upload-artifact@v2.2.3
         with:
-          name: confd-image.tar
+          name: confd-image.tar.gz
           path: |
-            image.tar
+            image.tar.gz
           retention-days: 5
 
       - name: Push to COS
@@ -67,5 +75,4 @@ jobs:
           TAG=${GITHUB_REF##*/}
           sudo pip install coscmd
           coscmd config -a ${SECRET_ID} -s ${SECRET_KEY} -b ${BUCKET} -e ${ENDPOINT}
-          gzip image.tar
           coscmd upload image.tar.gz  /workflows/images/confd-${TAG}.tar.gz  
