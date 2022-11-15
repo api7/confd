@@ -46,6 +46,8 @@ jobs:
           --platform linux/amd64,linux/arm64 \
           -f ./Dockerfile .
 
+          docker images
+
           docker save -o image.tar ${REGISTRY}/confd:${TAG}
 
       - name: Publish Artifact
