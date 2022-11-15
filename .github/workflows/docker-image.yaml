@@ -40,16 +40,14 @@ jobs:
           REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
         run: |
           TAG=${GITHUB_REF##*/}
-          docker buildx build --push \
+          docker buildx build \
           -t ${REGISTRY}/confd:${TAG} \
-           --build-arg VERSION=${TAG} \
+          --build-arg VERSION=${TAG} \
           --platform linux/amd64,linux/arm64 \
+          --output type=docker,dest=./image.tar \
           -f ./Dockerfile .
-
           docker images
-
-          docker save -o image.tar ${REGISTRY}/confd:${TAG}
-
+          docker push ${REGISTRY}/confd:${TAG}
       - name: Publish Artifact
         uses: actions/upload-artifact@v2.2.3
         with:
