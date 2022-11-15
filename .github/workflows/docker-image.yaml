@@ -63,7 +63,6 @@ jobs:
           retention-days: 5
 
       - name: Push to COS
-        if: startsWith(github.ref, 'refs/tags/')
         env:
           SECRET_ID: ${{ secrets.QCLOUD_COS_SECRETID }}
           SECRET_KEY: ${{ secrets.QCLOUD_COS_SECRETKEY }}
