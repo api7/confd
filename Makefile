@@ -2,6 +2,15 @@
 VERSION=`egrep -o '[0-9]+\.[0-9a-z.\-]+' version.go`
 GIT_SHA=`git rev-parse --short HEAD || echo`
 
+GOOS ?= linux
+GOARCH ?= arm64
+
+### function for get build os and arch args
+### param: $(1) OS
+### param: $(2) ARCH
+go_build_args = GOOS=$(1) GOARCH=$(2)
+
+
 build:
 	@echo "Building confd..."
 	@mkdir -p bin
@@ -38,3 +47,12 @@ release:
 	done
 	@docker run -it --rm -v ${PWD}:/app -e "GOOS=linux" -e "GOARCH=arm64" -e "CGO_ENABLED=0" confd_builder go build -ldflags="-s -w -X main.GitSHA=${GIT_SHA}" -o bin/confd-${VERSION}-linux-arm64;
 	@upx bin/confd-${VERSION}-*
+
+
+.PHONY: build-binary
+build-binary:  ## Build confd
+	@$(call go_build_args,$(GOOS),$(GOARCH)) CGO_ENABLED=0 go build -ldflags "-X main.GitSHA=${GIT_SHA}" -o ./confd .
+
+.PHONY: build-image-local
+build-image-local: build-binary
+	@docker build -f Dockerfile-local -t api7/confd:dev .

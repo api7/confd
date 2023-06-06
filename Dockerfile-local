@@ -1,0 +1,7 @@
+FROM debian:bullseye-slim
+
+COPY ./confd /usr/local/bin/confd
+
+RUN  apt-get update && apt-get install -y --no-install-recommends curl net-tools telnet procps
+
+CMD ["/usr/local/bin/confd"]

@@ -29,12 +29,6 @@ jobs:
         with:
           go-version: 1.19
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
       - name: Build and Push
         env:
           REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
@@ -45,31 +39,22 @@ jobs:
           --platform linux/amd64,linux/arm64 \
           -f ./Dockerfile .
 
-          # export for upload
-          docker buildx build \
-          -t ${REGISTRY}/confd:${TAG} \
-          --platform linux/amd64 \
-          --output type=docker,dest=./image.tar \
-          -f ./Dockerfile .
+      - name: Build arm64 Image and push to Docker Registry
+        env:
+          REGISTRY: ${{ secrets.PRIVATE_DOCKER_REGISTRY }}
+          GOOS: "linux"
+          GOARCH: "arm64"
+        run: |
+          make build-image-local
 
-          gzip image.tar
+          docker tag api7/confd:dev ${REGISTRY}/api7/confd:${{ steps.branch_env.outputs.version }}-arm64
+          docker push ${REGISTRY}/api7/confd:${{ steps.branch_env.outputs.version }}-arm64
+          docker save ${REGISTRY}/api7/confd:${{ steps.branch_env.outputs.version }}-arm64 | gzip > confd.tar.gz
 
       - name: Publish Artifact
         uses: actions/upload-artifact@v2.2.3
         with:
-          name: confd-image.tar.gz
+          name: docker-image.tar
           path: |
-            image.tar.gz
-          retention-days: 5
-
-      - name: Push to COS
-        env:
-          SECRET_ID: ${{ secrets.QCLOUD_COS_SECRETID }}
-          SECRET_KEY: ${{ secrets.QCLOUD_COS_SECRETKEY }}
-          BUCKET: api7-enterprise-1301662268
-          ENDPOINT: cos.accelerate.myqcloud.com
-        run: |
-          TAG=${GITHUB_REF##*/}
-          sudo pip install coscmd
-          coscmd config -a ${SECRET_ID} -s ${SECRET_KEY} -b ${BUCKET} -e ${ENDPOINT}
-          coscmd upload image.tar.gz  /workflows/images/confd-${TAG}.tar.gz  
+            ./confd.tar.gz
+          retention-days: 1
