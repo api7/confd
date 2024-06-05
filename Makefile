@@ -55,4 +55,4 @@ build-binary:  ## Build confd
 
 .PHONY: build-image-local
 build-image-local: build-binary
-	@docker build -f Dockerfile-local -t api7/confd:dev .
+	@docker build -f Dockerfile-local -t confd:dev .
